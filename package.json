@@ -1,0 +1,25 @@
+{
+  "name": "intercopas",
+  "version": "1.0.0",
+  "description": "Sync clipboard text between desktops through your posts API.",
+  "main": "src/main.js",
+  "author": "Intercopas",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder"
+  },
+  "devDependencies": {
+    "electron": "^35.0.0",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "id.my.aazzam.intercopas",
+    "productName": "Intercopas",
+    "files": ["src/**/*", "package.json"],
+    "directories": { "output": "dist" },
+    "linux": { "target": ["AppImage", "deb"] },
+    "win": { "target": ["nsis"] },
+    "mac": { "target": ["dmg"] }
+  }
+}

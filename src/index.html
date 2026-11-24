@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Intercopas</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="shell">
+    <header><div class="brand"><span class="brand-mark">↗</span><span>INTERCOPAS</span></div><span class="secure">PRIVATE SYNC</span></header>
+    <section class="hero">
+      <p class="eyebrow">YOUR CLIPBOARD, IN STEP</p>
+      <h1>Copy here.<br><em>See it there.</em></h1>
+      <p class="lede">Your newest clipboard item stays visible in this desktop overlay and syncs to your other desktops.</p>
+    </section>
+    <section class="connection card">
+      <div class="section-title"><div><span class="step">01</span><h2>Connect your account</h2></div><span class="connection-state" id="connection-state">Not connected</span></div>
+      <p class="helper">Sign in with the phone number and password for your API account.</p>
+      <form id="login-form">
+        <input id="phone" type="tel" placeholder="Phone number" autocomplete="username" inputmode="tel" required>
+        <input id="password" type="password" placeholder="Password" autocomplete="current-password" required>
+        <button id="connect" type="submit">Sign in</button>
+      </form>
+      <p class="login-error" id="login-error" role="alert"></p>
+      <p class="tiny">API · threads-api.aazzam.my.id</p>
+    </section>
+    <section class="sync-card card">
+      <div class="sync-top"><div><span class="step">02</span><h2>Clipboard sync</h2></div><label class="switch"><input id="enabled" type="checkbox"><span class="slider"></span><span class="sr-only">Enable clipboard sync</span></label></div>
+      <p class="sync-explain">Changes sync automatically. The app checks for new clips every <strong>15 seconds</strong>.</p>
+      <div class="tagline"><span>POST TAG</span><b>clipboard</b><span class="tag-dot"></span></div>
+      <div class="actions"><button class="secondary" id="send-now">Send current clipboard</button><button class="secondary" id="check-now">Check now</button></div>
+    </section>
+    <section class="clipboard-card card"><div class="clipboard-heading"><span class="step">LATEST ITEM</span><span class="copy-state" id="copy-state">Waiting for a copy</span></div><pre id="latest-clipboard">Copy text on this desktop to share it.</pre></section>
+    <section class="activity card"><div class="activity-head"><div><span class="step">03</span><h2>Recent activity</h2></div><span class="live-dot" id="live-dot"></span></div><p id="activity">Connect your API account to start syncing.</p></section>
+    <footer><span>Only plain text is synced.</span><span>Sync runs while this app is open.</span></footer>
+    <div class="toast" id="toast" role="status"></div>
+  </main>
+  <script src="renderer.js"></script>
+</body>
+</html>
