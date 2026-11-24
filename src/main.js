@@ -25,7 +25,7 @@ function readSettings() {
 }
 function saveSettings() {
   fs.mkdirSync(path.dirname(settingsPath()), { recursive: true });
-  fs.writeFileSync(settingsPath(), JSON.stringify({ token, enabled }, null, 2), { mode: 0o600 });
+  fs.writeFileSync(settingsPath(), JSON.stringify({ token, enabled, newestPostId }, null, 2), { mode: 0o600 });
 }
 function status() {
   if (mainWindow && !mainWindow.isDestroyed()) {
@@ -52,7 +52,7 @@ async function login(phone, password) {
   if (!result.token) throw new Error('The login response did not include a token.');
   token = result.token;
   enabled = true;
-  newestPostId = 0; lastRemoteContent = ''; cursorInitialized = false; latestClipboard = '';
+  newestPostId = 0; lastRemoteContent = ''; cursorInitialized = true; latestClipboard = '';
   saveSettings(); startSync();
   return { ok: true, user: result.user?.name || '' };
 }
@@ -72,35 +72,17 @@ async function pollPosts() {
   if (!token || !enabled || busy) return;
   busy = true;
   try {
-    const posts = await api(`/posts?type=${encodeURIComponent(POST_TYPE)}`);
-    const ordered = (posts || []).slice().sort((a, b) => Number(a.id) - Number(b.id));
-    if (!cursorInitialized) {
-      newestPostId = ordered.reduce((max, post) => Math.max(max, Number(post.id) || 0), 0);
-      cursorInitialized = true;
-      const latest = ordered.at(-1);
-      if (latest?.content) {
-        latestClipboard = latest.content;
+    const posts = await api(`/posts/latest?latestId=${encodeURIComponent(newestPostId)}&type=${encodeURIComponent(POST_TYPE)}`);
+    const latest = posts?.[0];
+    if (latest) {
+      newestPostId = Number(latest.id) || newestPostId;
+      saveSettings();
+      if (latest.content && latest.content !== lastClipboard) {
         lastRemoteContent = latest.content;
-        if (latest.content !== lastClipboard) {
-          clipboard.writeText(latest.content);
-          lastClipboard = latest.content;
-        }
+        latestClipboard = latest.content;
+        clipboard.writeText(latest.content);
+        lastClipboard = latest.content;
       }
-      setActivity('Syncing clipboard every 15 seconds.');
-      return;
-    }
-    const unseen = ordered.filter(post => Number(post.id) > newestPostId);
-    if (unseen.length) {
-      for (const post of unseen) {
-        newestPostId = Math.max(newestPostId, Number(post.id) || 0);
-        if (post.content && post.content !== lastClipboard) {
-          lastRemoteContent = post.content;
-          latestClipboard = post.content;
-          clipboard.writeText(post.content);
-          lastClipboard = post.content;
-        }
-      }
-      if (unseen.length) latestClipboard = unseen[unseen.length - 1].content || latestClipboard;
       setActivity(`Received clipboard · ${new Date().toLocaleTimeString()}`);
     }
   } catch (error) {
@@ -138,6 +120,7 @@ function createWindow() {
 app.whenReady().then(() => {
   nativeTheme.themeSource = 'light';
   const settings = readSettings(); token = settings.token || ''; enabled = Boolean(settings.enabled && token);
+  newestPostId = Number(settings.newestPostId) || 0;
   createWindow();
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
 });
