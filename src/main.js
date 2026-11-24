@@ -122,6 +122,7 @@ app.whenReady().then(() => {
   const settings = readSettings(); token = settings.token || ''; enabled = Boolean(settings.enabled && token);
   newestPostId = Number(settings.newestPostId) || 0;
   createWindow();
+  startSync();
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
 });
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
