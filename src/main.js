@@ -13,8 +13,8 @@ let enabled = false;
 let busy = false;
 let lastClipboard = '';
 let newestPostId = 0;
+let latestHydrationPending = false;
 let lastRemoteContent = '';
-let cursorInitialized = false;
 let activity = 'Connect your API account to start syncing.';
 let latestClipboard = '';
 
@@ -25,7 +25,8 @@ function readSettings() {
 }
 function saveSettings() {
   fs.mkdirSync(path.dirname(settingsPath()), { recursive: true });
-  fs.writeFileSync(settingsPath(), JSON.stringify({ token, enabled, newestPostId }, null, 2), { mode: 0o600 });
+  // Authentication is intentionally session-only: every app launch requires login.
+  fs.writeFileSync(settingsPath(), JSON.stringify({ enabled, newestPostId }, null, 2), { mode: 0o600 });
 }
 function status() {
   if (mainWindow && !mainWindow.isDestroyed()) {
@@ -52,7 +53,7 @@ async function login(phone, password) {
   if (!result.token) throw new Error('The login response did not include a token.');
   token = result.token;
   enabled = true;
-  newestPostId = 0; lastRemoteContent = ''; cursorInitialized = true; latestClipboard = '';
+  newestPostId = 0; lastRemoteContent = ''; latestClipboard = '';
   saveSettings(); startSync();
   return { ok: true, user: result.user?.name || '' };
 }
@@ -72,18 +73,27 @@ async function pollPosts() {
   if (!token || !enabled || busy) return;
   busy = true;
   try {
-    const posts = await api(`/posts/latest?latestId=${encodeURIComponent(newestPostId)}&type=${encodeURIComponent(POST_TYPE)}`);
+    // On each sync start, fetch the current latest post once even if its ID was
+    // saved before shutdown. Later polls use the cursor for incremental checks.
+    const cursor = latestHydrationPending ? 0 : newestPostId;
+    const posts = await api(`/posts/latest?latestId=${encodeURIComponent(cursor)}&type=${encodeURIComponent(POST_TYPE)}`);
+    latestHydrationPending = false;
     const latest = posts?.[0];
     if (latest) {
-      newestPostId = Number(latest.id) || newestPostId;
-      saveSettings();
-      if (latest.content && latest.content !== lastClipboard) {
+      const postId = Number(latest.id) || 0;
+      if (postId > newestPostId) newestPostId = postId;
+      if (latest.content) {
         lastRemoteContent = latest.content;
         latestClipboard = latest.content;
-        clipboard.writeText(latest.content);
-        lastClipboard = latest.content;
+        if (latest.content !== lastClipboard) {
+          clipboard.writeText(latest.content);
+          lastClipboard = latest.content;
+        }
       }
-      setActivity(`Received clipboard · ${new Date().toLocaleTimeString()}`);
+      saveSettings();
+      if (latest.content) {
+        setActivity(`Received clipboard · ${new Date().toLocaleTimeString()}`);
+      }
     }
   } catch (error) {
     setActivity(`Sync failed: ${error.message}`);
@@ -94,7 +104,7 @@ function startSync() {
   clearInterval(pollTimer); clearInterval(watchTimer);
   lastClipboard = clipboard.readText();
   if (!enabled || !token) { status(); return; }
-  cursorInitialized = false;
+  latestHydrationPending = true;
   pollPosts();
   pollTimer = setInterval(pollPosts, POLL_INTERVAL_MS);
   watchTimer = setInterval(() => {
@@ -119,10 +129,13 @@ function createWindow() {
 
 app.whenReady().then(() => {
   nativeTheme.themeSource = 'light';
-  const settings = readSettings(); token = settings.token || ''; enabled = Boolean(settings.enabled && token);
+  const settings = readSettings();
+  token = '';
+  enabled = false;
   newestPostId = Number(settings.newestPostId) || 0;
+  // Also remove any token written by older versions from the settings file.
+  saveSettings();
   createWindow();
-  startSync();
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
 });
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });

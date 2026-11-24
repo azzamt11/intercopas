@@ -12,7 +12,7 @@ function renderState(state) {
   $('connection-state').classList.toggle('on', state.connected);
   enabledInput.checked = state.enabled;
   enabledInput.disabled = !state.connected;
-  $('connect').textContent = state.connected ? 'Connected' : 'Sign in';
+  $('connect').textContent = state.connected ? 'Connected' : 'Connect';
   $('connect').disabled = state.connected;
   activity.textContent = state.activity;
   $('latest-clipboard').textContent = state.latestClipboard || 'Copy text on this desktop to share it.';
